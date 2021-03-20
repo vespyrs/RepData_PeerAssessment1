@@ -5,21 +5,111 @@ output:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
 
+```{r}
+library(ggplot2)
+activitydata <- read.csv("activity.csv")
+head(activitydata)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+activity_steps <- aggregate(steps~date, activitydata, sum)
+hist(activity_steps$steps, main = "total number of steps taken each day", xlab = "total steps per day", ylab = "number of days", col = "red", ylim = c(0,20), breaks=20)
+```
+
+Calculating the mean of total number of steps per day:
+
+```{r}
+mean(activity_steps$steps)
+```
+
+
+Calculating the median of total number of steps per day:
+
+```{r}
+median(activity_steps$steps)
+```
 
 
 ## What is the average daily activity pattern?
 
+```{r}
+average_daily <- aggregate(steps~interval, activitydata, mean, na.rm=TRUE)
+plot(average_daily$interval, average_daily$steps, type="l", main="average number of steps per interval", xlab="interval", ylab="average number of steps", col="red", lwd="1")
+```
+Calculating the interval with the maximum number of steps:
 
+```{r}
+average_daily[which.max(average_daily$steps), ]$interval
+```
 
 ## Imputing missing values
 
+Calculating the total number of missing values in the dataset:
 
+```{r}
+sum(is.na(activitydata$steps))
+```
+
+Filling in the missing values in the dataset: 
+
+```{r}
+filled_steps <- average_daily$steps[match(average_daily$interval, average_daily$interval)]
+```
+
+
+Making new dataset with the missing data filled in
+
+```{r}
+missing_col<-is.na(activitydata[,1])
+activity_filled <- activitydata
+activity_filled[missing_col,1] <- filled_steps
+head(activity_filled)
+```
+
+
+Plotting a histogram of the total steps taken each day
+
+```{r}
+steps_filled <- aggregate(steps~date, activity_filled, sum)
+hist(steps_filled$steps, main="total number of steps taken per day", xlab="total steps per day", ylab="number of days", col="red", breaks=20)
+```
+
+Calculating mean of filled total steps per day:
+
+```{r}
+mean(steps_filled$steps)
+```
+
+Calculating median of filled total steps per day
+
+```{r}
+median(steps_filled$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+library(dplyr)
+activity_filled$date <- as.Date(strptime(activity_filled$date, format="%Y-%m-%d"))
+activity_labeled <- activity_filled %>% mutate(datetype=ifelse(weekdays(activity_filled$date)=='Saturday' | weekdays(activity_filled$date)=='Sunday', 'Weekday', 'Weekend'))
+head(activity_labeled)
+```
+
+Plotting time series plot on panel plot of the 5-minute interval and average number of steps taken across all weekdays or weekends:
+
+```{r}
+activity_date <- aggregate(steps~interval + datetype, activity_labeled, mean)
+plot <- ggplot(activity_date, aes(interval, steps, color=datetype)) +
+  geom_line() +
+  xlab("interval") +
+  ylab("average number of steps") +
+  ggtitle("average daily steps according to type of day") +
+  facet_wrap(~datetype)
+print(plot)
+```
+
